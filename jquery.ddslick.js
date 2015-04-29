@@ -33,6 +33,7 @@
         clickOffToClose: true,
 		embedCSS: true,
         keepInViewport: false,
+        maxHeight: 0,
         onSelected: function () { }
     },
 
@@ -56,7 +57,7 @@
                 '.dd-option-selected { background:#f6f6f6; }' +
                 '.dd-option-image, .dd-selected-image { vertical-align:middle; float:left; margin-right:5px; max-width:64px;}' +
                 '.dd-image-right { float:right; margin-right:15px; margin-left:5px;}' +
-                '.dd-container{ position:relative;}​ .dd-selected-text { font-weight:bold}​</style>';
+                '.dd-selected-text { font-weight:bold}​</style>';
 
     //Public methods 
     methods.init = function (userOptions) {
@@ -82,6 +83,9 @@
 
                 var ddSelect = [], ddJson = options.data;
 
+
+                options.width = obj.attr('data-width') ? obj.attr('data-width') : options.width;
+
                 //Get data from HTML select options
                 obj.find('option').each(function () {
                     var $this = $(this), thisData = $this.data();
@@ -90,6 +94,7 @@
                         value: $this.val(),
                         selected: $this.is(':selected'),
                         description: thisData.description,
+                        level: parseInt($this.attr('data-lvl')),
                         imageSrc: thisData.imagesrc //keep it lowercase for HTML5 data-attributes
                     });
                 });
@@ -125,11 +130,23 @@
                 if (options.height != null)
                     ddOptions.css({ height: options.height, overflow: 'auto' });
 
+                //Set Scrollable
+                if(options.maxHeight > 0) {
+                    ddOptions.css({ 'max-height': options.maxHeight + 'px' });
+                    if($.fn.jScrollPane) {
+                        console.log(ddOptions);
+                        var $parent = ddOptions.parent(),
+                            $jScrollPaneDiv = $('<div>').addClass('scroll-pane').height(options.maxHeight).append(ddOptions);
+                        $parent.append($jScrollPaneDiv);
+                        $jScrollPaneDiv.jScrollPane();
+                    }
+                }
+
                 //Add ddOptions to the container. Replace with template engine later.
                 $.each(options.data, function (index, item) {
                     if (item.selected) options.defaultSelectedIndex = index;
                     ddOptions.append('<li>' +
-                        '<a class="dd-option">' +
+                        '<a class="dd-option" style="padding-left: '+( 10 + item.level*20 )+'px" >' +
                             (item.value ? ' <input class="dd-option-value" type="hidden" value="' + item.value + '" />' : '') +
                             (item.imageSrc ? ' <img class="dd-option-image' + (options.imagePosition == "right" ? ' dd-image-right' : '') + '" src="' + item.imageSrc + '" />' : '') +
                             (item.text ? ' <label class="dd-option-text">' + item.text + '</label>' : '') +
@@ -241,7 +258,7 @@
 
     //Private: Select index
     function selectIndex(obj, index) {
-
+        console.log(obj);
         //Get plugin data
         var pluginData = obj.data('ddslick');
 
@@ -291,7 +308,7 @@
 
         //Callback function on selection
         if (typeof settings.onSelected == 'function') {
-            settings.onSelected.call(this, pluginData);
+            settings.onSelected.call(obj, pluginData);
         }
     }
 
@@ -319,10 +336,16 @@
             $this.addClass('dd-open');
             ddOptions.show();
             if(pluginData.settings.keepInViewport) {
-                var scrollBottom = $(window).scrollTop() + $(window).height(),
-                    ddOptionBottom = ddOptions.offset().top + ddOptions.height();
-                if(ddOptionBottom > scrollBottom) {
-                    ddOptions.addClass('fixed');
+                console.log('a');
+                $el = ddOptions;
+                window.$el = $el;
+                var ddOptionsBottom = $el.get(0).getBoundingClientRect().bottom,
+                    windowBottom = $(window).height() + $(window).scrollTop(),
+                    diff = windowBottom - ddOptionsBottom;
+                console.log(ddOptionsBottom, windowBottom, diff);
+                if(diff < 0) {
+                    console.log( 'margin-top',"-"+ diff+"px");
+                    $el.css( 'margin-top',diff+"px" );
                 }
             }
             ddPointer.addClass('dd-pointer-up');
